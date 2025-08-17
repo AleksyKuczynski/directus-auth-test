@@ -1,35 +1,39 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function AuthCallback() {
+  const router = useRouter()
   const searchParams = useSearchParams()
-
+  const { login } = useAuth()
+  
   useEffect(() => {
-    // Log all parameters for debugging
-    const params: any = {}
-    searchParams.forEach((value, key) => {
-      params[key] = value
-    })
+    const handleCallback = async () => {
+      const token = searchParams.get('token')
+      
+      if (token) {
+        try {
+          await login(token)
+          router.push('/profile')
+        } catch (error) {
+          console.error('Authentication failed:', error)
+          router.push('/login?error=auth_failed')
+        }
+      } else {
+        router.push('/login?error=no_token')
+      }
+    }
     
-    console.log('Auth Callback Params:', params)
-    
-    // For now, just display what we received
-    // Later we'll handle the token properly
-  }, [searchParams])
-
+    handleCallback()
+  }, [searchParams, login, router])
+  
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="bg-white p-8 rounded-lg shadow max-w-md w-full">
-        <h2 className="text-xl font-bold mb-4">Authentication Callback</h2>
-        <div className="space-y-2">
-          {Array.from(searchParams.entries()).map(([key, value]) => (
-            <div key={key} className="text-sm">
-              <span className="font-semibold">{key}:</span> {value}
-            </div>
-          ))}
-        </div>
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Authenticating...</p>
       </div>
     </div>
   )
