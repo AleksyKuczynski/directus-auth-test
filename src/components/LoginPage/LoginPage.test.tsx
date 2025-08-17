@@ -5,11 +5,12 @@ import { LoginPage } from './LoginPage';
 
 // Mock the AuthContext
 const mockUseAuth = {
-  user: null,
+  user: null as any,
   loading: false,
   login: jest.fn(),
   logout: jest.fn(),
   checkUserExists: jest.fn(),
+  handleAuthCallback: jest.fn(),
 };
 
 jest.mock('../../contexts/AuthContext', () => ({
@@ -44,6 +45,7 @@ describe('LoginPage', () => {
       email: 'test@example.com',
       first_name: 'John',
       last_name: 'Doe',
+      provider: 'google',
     };
     mockUseAuth.loading = false;
     

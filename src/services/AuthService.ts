@@ -1,10 +1,5 @@
 import Cookies from 'js-cookie';
-
-export interface TokenData {
-  access_token: string;
-  refresh_token?: string;
-  expires_in?: number;
-}
+import type { TokenData } from '../types/auth';
 
 export class SessionManager {
   private readonly ACCESS_TOKEN_KEY = 'directus_access_token';

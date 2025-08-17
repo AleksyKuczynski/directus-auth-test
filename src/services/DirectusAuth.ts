@@ -1,16 +1,6 @@
 import { createDirectus, rest, authentication } from '@directus/sdk';
-import { SessionManager, TokenData } from './AuthService';
-
-// Define the user interface
-export interface DirectusUser {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  avatar?: string;
-  provider?: string;
-  external_identifier?: string;
-}
+import { SessionManager } from './AuthService';
+import type { DirectusUser, TokenData } from '../types/auth';
 
 // Define the Directus schema interface
 interface DirectusSchema {
@@ -31,7 +21,10 @@ export class DirectusAuth {
 
   async getGoogleAuthUrl(): Promise<string> {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/oauth/google`, {
+      // Get the callback URL for the current environment
+      const callbackUrl = `${window.location.origin}/auth/callback`;
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/oauth/google?redirect=${encodeURIComponent(callbackUrl)}`, {
         method: 'GET',
       });
 
@@ -40,7 +33,7 @@ export class DirectusAuth {
       }
 
       const data = await response.json();
-      return data.url || data.authorization_url;
+      return data.url || data.authorization_url || data.data?.url;
     } catch (error) {
       console.error('Error getting Google auth URL:', error);
       throw error;
@@ -54,24 +47,39 @@ export class DirectusAuth {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ 
+          code,
+          redirect_uri: `${window.location.origin}/auth/callback`
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Authentication failed');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(`Authentication failed: ${errorData?.error || response.statusText}`);
       }
 
       const authData = await response.json();
       
+      // Handle different response structures from Directus
       const tokenData: TokenData = {
-        access_token: authData.access_token,
-        refresh_token: authData.refresh_token,
-        expires_in: authData.expires_in,
+        access_token: authData.access_token || authData.data?.access_token,
+        refresh_token: authData.refresh_token || authData.data?.refresh_token,
+        expires_in: authData.expires_in || authData.data?.expires_in,
       };
+
+      if (!tokenData.access_token) {
+        throw new Error('No access token received from authentication');
+      }
 
       this.sessionManager.setToken(tokenData);
       
-      return authData.user;
+      // Get user data after setting token
+      const userData = await this.getCurrentUser();
+      if (!userData) {
+        throw new Error('Failed to get user data after authentication');
+      }
+      
+      return userData;
     } catch (error) {
       console.error('Error in auth callback:', error);
       throw error;

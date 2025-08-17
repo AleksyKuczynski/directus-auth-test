@@ -1,27 +1,7 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { DirectusAuth } from '../services/DirectusAuth';
 import { SessionManager } from '../services/AuthService';
-
-// Define proper types instead of 'any'
-interface DirectusUser {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  avatar?: string;
-}
-
-interface AuthContextType {
-  user: DirectusUser | null;
-  loading: boolean;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-  checkUserExists: (email: string) => Promise<boolean>;
-}
-
-interface AuthProviderProps {
-  children: ReactNode;
-}
+import type { DirectusUser, AuthContextType, AuthProviderProps } from '../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -37,7 +17,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         setLoading(true);
         const token = sessionManager.getToken();
-        if (token) {
+        if (token && !sessionManager.isTokenExpired(token)) {
           const currentUser = await directusAuth.getCurrentUser();
           setUser(currentUser);
         }
@@ -50,7 +30,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initAuth();
-  }, [sessionManager]); // Added sessionManager to dependencies
+  }, []); // Remove sessionManager from dependencies to avoid recreation
 
   const login = async (): Promise<void> => {
     try {
@@ -59,6 +39,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       window.location.href = authUrl;
     } catch (error) {
       console.error('Login error:', error);
+      setLoading(false);
+      throw error;
+    }
+  };
+
+  const handleAuthCallback = async (code: string): Promise<DirectusUser> => {
+    try {
+      setLoading(true);
+      const user = await directusAuth.handleAuthCallback(code);
+      setUser(user);
+      return user;
+    } catch (error) {
+      console.error('Auth callback error:', error);
+      throw error;
+    } finally {
       setLoading(false);
     }
   };
@@ -90,6 +85,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     login,
     logout,
+    handleAuthCallback,
     checkUserExists,
   };
 
