@@ -153,7 +153,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               ) : (
                 <div className={styles.newUser}>
-                  <p>We'll create a new account for you.</p>
+                  <p>We&apos;ll create a new account for you.</p>
                   <button 
                     onClick={handleAuth}
                     className={styles.primaryButton}

@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { AuthProvider, useAuth } from './AuthContext';
-import type { DirectusUser } from '../types/auth';
 
 // Mock the DirectusAuth service
 jest.mock('../services/DirectusAuth', () => ({
