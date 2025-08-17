@@ -7,27 +7,38 @@ import { useAuth } from '@/contexts/AuthContext'
 export default function AuthCallback() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { login } = useAuth()
+  const { handleAuthCallback } = useAuth()
   
   useEffect(() => {
     const handleCallback = async () => {
-      const token = searchParams.get('token')
+      // Get the authorization code from URL parameters
+      const code = searchParams.get('code')
+      const error = searchParams.get('error')
       
-      if (token) {
+      if (error) {
+        console.error('OAuth error:', error);
+        router.push('/login?error=oauth_error');
+        return;
+      }
+      
+      if (code) {
         try {
-          await login(token)
-          router.push('/profile')
+          // Handle the OAuth callback with the authorization code
+          await handleAuthCallback(code);
+          router.push('/profile');
         } catch (error) {
-          console.error('Authentication failed:', error)
-          router.push('/login?error=auth_failed')
+          console.error('Authentication failed:', error);
+          router.push('/login?error=auth_failed');
         }
       } else {
-        router.push('/login?error=no_token')
+        // No code parameter found
+        console.error('No authorization code found');
+        router.push('/login?error=no_code');
       }
     }
     
     handleCallback()
-  }, [searchParams, login, router])
+  }, [searchParams, handleAuthCallback, router])
   
   return (
     <div className="flex justify-center items-center min-h-screen">

@@ -1,27 +1,35 @@
 'use client'
 
 import { useState } from 'react'
-import DirectusAuth from '@/services/DirectusAuth'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [userExists, setUserExists] = useState<boolean | null>(null)
   const [checking, setChecking] = useState(false)
   
-  const auth = new DirectusAuth()
+  const { login, checkUserExists, loading } = useAuth()
 
   const checkUser = async () => {
     if (!email) return
     
     setChecking(true)
-    const exists = await auth.checkUserExists(email)
-    setUserExists(exists)
-    setChecking(false)
+    try {
+      const exists = await checkUserExists(email)
+      setUserExists(exists)
+    } catch (error) {
+      console.error('Error checking user:', error)
+    } finally {
+      setChecking(false)
+    }
   }
 
-  const handleGoogleAuth = () => {
-    const redirectUrl = `${window.location.origin}/auth/callback`
-    window.location.href = auth.getGoogleAuthUrl(redirectUrl)
+  const handleGoogleAuth = async () => {
+    try {
+      await login()
+    } catch (error) {
+      console.error('Authentication error:', error)
+    }
   }
 
   return (
@@ -56,10 +64,10 @@ export default function LoginPage() {
             
             <button
               onClick={handleGoogleAuth}
-              disabled={!email}
+              disabled={!email || loading}
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {userExists ? 'Login' : 'Register'} with Google
+              {loading ? 'Redirecting...' : (userExists ? 'Login' : 'Register')} with Google
             </button>
           </div>
           
