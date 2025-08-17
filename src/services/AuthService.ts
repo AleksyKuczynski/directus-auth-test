@@ -1,120 +1,57 @@
-import { createDirectus, authentication, rest, readMe } from '@directus/sdk'
+import Cookies from 'js-cookie';
 
-export interface User {
-  id: string
-  email: string
-  first_name?: string
-  last_name?: string
-  avatar?: string
-  external_identifier?: string
+export interface TokenData {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
 }
 
-export interface AuthTokens {
-  access_token: string
-  refresh_token: string
-  expires: number
-}
+export class SessionManager {
+  private readonly ACCESS_TOKEN_KEY = 'directus_access_token';
+  private readonly REFRESH_TOKEN_KEY = 'directus_refresh_token';
 
-export interface AuthResponse extends AuthTokens {
-  user: User
-}
-
-class AuthService {
-  private static instance: AuthService
-  private client: any
-  
-  private constructor() {
-    this.client = createDirectus(process.env.NEXT_PUBLIC_DIRECTUS_URL!)
-      .with(authentication('json'))
-      .with(rest())
-  }
-  
-  public static getInstance(): AuthService {
-    if (!AuthService.instance) {
-      AuthService.instance = new AuthService()
+  setToken(tokenData: TokenData): void {
+    if (tokenData.access_token) {
+      Cookies.set(this.ACCESS_TOKEN_KEY, tokenData.access_token, {
+        expires: tokenData.expires_in ? tokenData.expires_in / 86400 : 7, // Convert seconds to days, default 7 days
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
     }
-    return AuthService.instance
+
+    if (tokenData.refresh_token) {
+      Cookies.set(this.REFRESH_TOKEN_KEY, tokenData.refresh_token, {
+        expires: 30, // 30 days for refresh token
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+    }
   }
-  
-  async loginWithGoogle(googleToken: string): Promise<AuthResponse> {
+
+  getToken(): string | undefined {
+    return Cookies.get(this.ACCESS_TOKEN_KEY);
+  }
+
+  getRefreshToken(): string | undefined {
+    return Cookies.get(this.REFRESH_TOKEN_KEY);
+  }
+
+  clearToken(): void {
+    Cookies.remove(this.ACCESS_TOKEN_KEY);
+    Cookies.remove(this.REFRESH_TOKEN_KEY);
+  }
+
+  isTokenExpired(token?: string): boolean {
+    if (!token) return true;
+    
     try {
-      // Exchange Google token for Directus token
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/login/google`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token: googleToken }),
-        }
-      )
-      
-      if (!response.ok) {
-        throw new Error('Google authentication failed')
-      }
-      
-      const data = await response.json()
-      
-      // Set token for subsequent requests
-      this.client.setToken(data.data.access_token)
-      
-      // Fetch user details
-      const user = await this.client.request(readMe())
-      
-      return {
-        ...data.data,
-        user,
-      }
+      // Basic JWT payload extraction (without verification)
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
     } catch (error) {
-      console.error('Google login error:', error)
-      throw error
+      console.error('Error checking token expiration:', error);
+      return true;
     }
-  }
-  
-  async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/refresh`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        }
-      )
-      
-      if (!response.ok) {
-        throw new Error('Token refresh failed')
-      }
-      
-      const data = await response.json()
-      return data.data
-    } catch (error) {
-      console.error('Token refresh error:', error)
-      throw error
-    }
-  }
-  
-  async logout(refreshToken: string): Promise<void> {
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/logout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-      })
-    } catch (error) {
-      console.error('Logout error:', error)
-    }
-  }
-  
-  async getCurrentUser(accessToken: string): Promise<User> {
-    this.client.setToken(accessToken)
-    return await this.client.request(readMe())
   }
 }
-
-export default AuthService

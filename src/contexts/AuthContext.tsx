@@ -1,85 +1,109 @@
-'use client'
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { DirectusAuth } from '../services/DirectusAuth';
+import { SessionManager } from '../services/AuthService';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import AuthService from '@/services/AuthService'
-import SessionManager from '@/services/SessionManager'
+// Define proper types instead of 'any'
+interface DirectusUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar?: string;
+}
 
 interface AuthContextType {
-  user: any | null
-  loading: boolean
-  login: (googleToken: string) => Promise<void>
-  logout: () => Promise<void>
-  isAuthenticated: boolean
+  user: DirectusUser | null;
+  loading: boolean;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
+  checkUserExists: (email: string) => Promise<boolean>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any | null>(null)
-  const [loading, setLoading] = useState(true)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<DirectusUser | null>(null);
+  const [loading, setLoading] = useState(true);
   
-  const authService = AuthService.getInstance()
-  const sessionManager = SessionManager.getInstance()
-  
+  const directusAuth = new DirectusAuth();
+  const sessionManager = new SessionManager();
+
   useEffect(() => {
-    // Check for existing session on mount
-    const session = sessionManager.getSession()
-    if (session) {
-      setUser(session.user)
-    }
-    setLoading(false)
-  }, [])
-  
-  const login = async (googleToken: string) => {
+    const initAuth = async () => {
+      try {
+        setLoading(true);
+        const token = sessionManager.getToken();
+        if (token) {
+          const currentUser = await directusAuth.getCurrentUser();
+          setUser(currentUser);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        sessionManager.clearToken();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, [sessionManager]); // Added sessionManager to dependencies
+
+  const login = async (): Promise<void> => {
     try {
-      const authResponse = await authService.loginWithGoogle(googleToken)
-      
-      sessionManager.saveSession({
-        accessToken: authResponse.access_token,
-        refreshToken: authResponse.refresh_token,
-        expiresAt: Date.now() + (authResponse.expires * 1000),
-        user: {
-          id: authResponse.user.id,
-          email: authResponse.user.email,
-          name: `${authResponse.user.first_name} ${authResponse.user.last_name}`.trim(),
-        },
-      })
-      
-      setUser(authResponse.user)
+      setLoading(true);
+      const authUrl = await directusAuth.getGoogleAuthUrl();
+      window.location.href = authUrl;
     } catch (error) {
-      console.error('Login failed:', error)
-      throw error
+      console.error('Login error:', error);
+      setLoading(false);
     }
-  }
-  
-  const logout = async () => {
-    const session = sessionManager.getSession()
-    if (session) {
-      await authService.logout(session.refreshToken)
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      await directusAuth.logout();
+      sessionManager.clearToken();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setLoading(false);
     }
-    sessionManager.clearSession()
-    setUser(null)
-  }
-  
+  };
+
+  const checkUserExists = async (email: string): Promise<boolean> => {
+    try {
+      return await directusAuth.checkUserExists(email);
+    } catch (error) {
+      console.error('Check user exists error:', error);
+      return false;
+    }
+  };
+
+  const contextValue: AuthContextType = {
+    user,
+    loading,
+    login,
+    logout,
+    checkUserExists,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
-  )
-}
+  );
+};
 
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
-}
+  return context;
+};

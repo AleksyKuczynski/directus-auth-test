@@ -1,130 +1,55 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { useRouter } from 'next/navigation'
-import LoginPage from './LoginPage'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { LoginPage } from './LoginPage';
 
-// Mock next/navigation
-jest.mock('next/navigation')
+// Mock the AuthContext
+const mockUseAuth = {
+  user: null,
+  loading: false,
+  login: jest.fn(),
+  logout: jest.fn(),
+  checkUserExists: jest.fn(),
+};
 
-// Mock AuthContext
-jest.mock('@/contexts/AuthContext', () => ({
-  ...jest.requireActual('@/contexts/AuthContext'),
-  useAuth: jest.fn(),
-}))
+jest.mock('../../contexts/AuthContext', () => ({
+  useAuth: () => mockUseAuth,
+}));
 
 describe('LoginPage', () => {
-  const mockPush = jest.fn()
-  const mockUseAuth = useAuth as jest.MockedFunction<typeof useAuth>
-  
   beforeEach(() => {
-    jest.clearAllMocks()
-    ;(useRouter as jest.Mock).mockReturnValue({
-      push: mockPush,
-    })
-  })
-  
-  describe('when user is not logged in', () => {
-    beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        loading: false,
-        isAuthenticated: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-      })
-    })
+    jest.clearAllMocks();
+  });
+
+  it('renders login page correctly', () => {
+    render(<LoginPage />);
     
-    it('should render new user state by default', () => {
-      render(<LoginPage />)
-      
-      expect(screen.getByTestId('new-user-state')).toBeInTheDocument()
-      expect(screen.getByTestId('email-input')).toBeInTheDocument()
-      expect(screen.getByTestId('register-button')).toBeInTheDocument()
-    })
+    // Check if the main container is rendered
+    const loginContainer = screen.getByTestId('login-page');
+    expect(loginContainer).toBeInTheDocument();
+  });
+
+  it('shows loading state when loading is true', () => {
+    mockUseAuth.loading = true;
     
-    it('should disable register button when email is empty', () => {
-      render(<LoginPage />)
-      
-      const registerButton = screen.getByTestId('register-button')
-      expect(registerButton).toBeDisabled()
-    })
+    render(<LoginPage />);
     
-    it('should enable register button when email is entered', async () => {
-      const user = userEvent.setup()
-      render(<LoginPage />)
-      
-      const emailInput = screen.getByTestId('email-input')
-      const registerButton = screen.getByTestId('register-button')
-      
-      await user.type(emailInput, 'test@example.com')
-      
-      await waitFor(() => {
-        expect(registerButton).not.toBeDisabled()
-      })
-    })
-  })
-  
-  describe('when user is logged in', () => {
-    beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        user: { email: 'user@example.com', id: '123' },
-        loading: false,
-        isAuthenticated: true,
-        login: jest.fn(),
-        logout: jest.fn(),
-      })
-    })
+    const loadingElement = screen.getByText(/loading/i);
+    expect(loadingElement).toBeInTheDocument();
+  });
+
+  it('shows user info when user is logged in', () => {
+    mockUseAuth.user = {
+      id: '1',
+      email: 'test@example.com',
+      first_name: 'John',
+      last_name: 'Doe',
+    };
+    mockUseAuth.loading = false;
     
-    it('should render logged in state', () => {
-      render(<LoginPage />)
-      
-      expect(screen.getByTestId('logged-in-state')).toBeInTheDocument()
-      expect(screen.getByText(/Hello, user@example.com!/)).toBeInTheDocument()
-      expect(screen.getByTestId('profile-button')).toBeInTheDocument()
-    })
+    render(<LoginPage />);
     
-    it('should navigate to profile page when profile button is clicked', async () => {
-      const user = userEvent.setup()
-      render(<LoginPage />)
-      
-      const profileButton = screen.getByTestId('profile-button')
-      await user.click(profileButton)
-      
-      expect(mockPush).toHaveBeenCalledWith('/profile')
-    })
-  })
-  
-  describe('when existing user is detected', () => {
-    beforeEach(() => {
-      mockUseAuth.mockReturnValue({
-        user: null,
-        loading: false,
-        isAuthenticated: false,
-        login: jest.fn(),
-        logout: jest.fn(),
-      })
-      
-      // Mock fetch for user check
-      global.fetch = jest.fn().mockResolvedValue({
-        json: async () => ({
-          data: [{ email: 'existing@example.com' }],
-        }),
-      })
-    })
-    
-    it('should show login button for existing users', async () => {
-      const user = userEvent.setup()
-      render(<LoginPage />)
-      
-      const emailInput = screen.getByTestId('email-input')
-      await user.type(emailInput, 'existing@example.com')
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('existing-user-state')).toBeInTheDocument()
-        expect(screen.getByTestId('login-button')).toBeInTheDocument()
-      })
-    })
-  })
-})
+    const userInfo = screen.getByText(/john doe/i);
+    expect(userInfo).toBeInTheDocument();
+  });
+});

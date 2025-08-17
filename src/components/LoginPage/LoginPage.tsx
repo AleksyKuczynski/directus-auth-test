@@ -1,131 +1,185 @@
-'use client'
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../contexts/AuthContext';
+import styles from './LoginPage.module.scss';
 
-import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-import styles from './LoginPage.module.scss'
+export const LoginPage: React.FC = () => {
+  const { user, loading, login, checkUserExists } = useAuth();
+  const [email, setEmail] = useState('');
+  const [userExists, setUserExists] = useState<boolean | null>(null);
+  const [isCheckingUser, setIsCheckingUser] = useState(false);
+  const router = useRouter();
 
-enum UserState {
-  LOADING = 'loading',
-  LOGGED_IN = 'logged_in',
-  EXISTING_USER = 'existing_user',
-  NEW_USER = 'new_user',
-}
-
-const LoginPage: React.FC = () => {
-  const router = useRouter()
-  const { user, isAuthenticated, loading } = useAuth()
-  const [userState, setUserState] = useState<UserState>(UserState.LOADING)
-  const [email, setEmail] = useState('')
-  
   useEffect(() => {
-    if (!loading) {
-      if (isAuthenticated) {
-        setUserState(UserState.LOGGED_IN)
-      } else if (email) {
-        // Check if user exists in Directus
-        checkUserExists(email)
-      } else {
-        setUserState(UserState.NEW_USER)
-      }
+    if (user) {
+      router.push('/profile');
     }
-  }, [loading, isAuthenticated, email])
-  
-  const checkUserExists = async (email: string) => {
+  }, [user, router]);
+
+  const handleEmailCheck = async () => {
+    if (!email.trim()) return;
+    
+    setIsCheckingUser(true);
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_DIRECTUS_URL}/users?filter[email][_eq]=${email}`
-      )
-      const data = await response.json()
-      
-      if (data.data && data.data.length > 0) {
-        setUserState(UserState.EXISTING_USER)
-      } else {
-        setUserState(UserState.NEW_USER)
-      }
+      const exists = await checkUserExists(email);
+      setUserExists(exists);
     } catch (error) {
-      console.error('Error checking user:', error)
-      setUserState(UserState.NEW_USER)
+      console.error('Error checking user:', error);
+    } finally {
+      setIsCheckingUser(false);
     }
-  }
-  
-  const handleGoogleAuth = () => {
-    // Redirect to Directus Google OAuth endpoint
-    window.location.href = `${process.env.NEXT_PUBLIC_DIRECTUS_URL}/auth/login/google?redirect=${window.location.origin}/auth/callback`
-  }
-  
-  const handleProfileClick = () => {
-    router.push('/profile')
-  }
-  
+  };
+
+  const handleAuth = async () => {
+    try {
+      await login();
+    } catch (error) {
+      console.error('Authentication error:', error);
+    }
+  };
+
+  const handleGoToProfile = () => {
+    router.push('/profile');
+  };
+
   if (loading) {
-    return <div className={styles.loading}>Loading...</div>
+    return (
+      <div className={styles.container} data-testid="login-page">
+        <div className={styles.loadingContainer}>
+          <div className={styles.spinner}></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
   }
-  
-  return (
-    <div className={styles.loginPage} data-testid="login-page">
-      <div className={styles.container}>
-        <h1 className={styles.title}>Welcome</h1>
-        
-        {userState === UserState.LOGGED_IN && user && (
-          <div className={styles.loggedIn} data-testid="logged-in-state">
-            <p className={styles.userName}>Hello, {user.email}!</p>
-            <button
-              className={styles.profileButton}
-              onClick={handleProfileClick}
-              data-testid="profile-button"
+
+  // User is logged in
+  if (user) {
+    return (
+      <div className={styles.container} data-testid="login-page">
+        <div className={styles.card}>
+          <div className={styles.header}>
+            <h1>Welcome Back!</h1>
+            <div className={styles.userInfo}>
+              {user.avatar && (
+                <Image
+                  src={user.avatar}
+                  alt="User Avatar"
+                  width={64}
+                  height={64}
+                  className={styles.avatar}
+                />
+              )}
+              <div className={styles.userDetails}>
+                <h2>{user.first_name} {user.last_name}</h2>
+                <p className={styles.email}>{user.email}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className={styles.actions}>
+            <button 
+              onClick={handleGoToProfile}
+              className={styles.primaryButton}
             >
               Go to Profile
             </button>
           </div>
-        )}
-        
-        {userState === UserState.EXISTING_USER && (
-          <div className={styles.existingUser} data-testid="existing-user-state">
-            <p className={styles.userName}>{email}</p>
-            <button
-              className={styles.loginButton}
-              onClick={handleGoogleAuth}
-              data-testid="login-button"
-            >
-              <img
-                src="/google-logo.svg"
-                alt="Google"
-                className={styles.googleIcon}
-              />
-              Login with Google
-            </button>
+        </div>
+      </div>
+    );
+  }
+
+  // User is not logged in
+  return (
+    <div className={styles.container} data-testid="login-page">
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <div className={styles.logoContainer}>
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              width={64}
+              height={64}
+              className={styles.logo}
+            />
           </div>
-        )}
-        
-        {userState === UserState.NEW_USER && (
-          <div className={styles.newUser} data-testid="new-user-state">
+          <h1>Welcome</h1>
+          <p className={styles.subtitle}>Sign in to access your account</p>
+        </div>
+
+        <div className={styles.form}>
+          <div className={styles.inputGroup}>
+            <label htmlFor="email" className={styles.label}>
+              Email Address
+            </label>
             <input
               type="email"
-              placeholder="Enter your email"
+              id="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={styles.emailInput}
-              data-testid="email-input"
+              onBlur={handleEmailCheck}
+              placeholder="Enter your email"
+              className={styles.input}
             />
-            <button
-              className={styles.registerButton}
-              onClick={handleGoogleAuth}
-              disabled={!email}
-              data-testid="register-button"
-            >
-              <img
-                src="/google-logo.svg"
-                alt="Google"
-                className={styles.googleIcon}
-              />
-              Register with Google
-            </button>
           </div>
-        )}
+
+          {isCheckingUser && (
+            <div className={styles.checking}>
+              <p>Checking user...</p>
+            </div>
+          )}
+
+          {userExists !== null && !isCheckingUser && (
+            <div className={styles.userStatus}>
+              {userExists ? (
+                <div className={styles.existingUser}>
+                  <p>Welcome back! We found your account.</p>
+                  <button 
+                    onClick={handleAuth}
+                    className={styles.primaryButton}
+                    disabled={loading}
+                  >
+                    <Image
+                      src="/google-icon.svg"
+                      alt="Google"
+                      width={20}
+                      height={20}
+                      className={styles.googleIcon}
+                    />
+                    Sign in with Google
+                  </button>
+                </div>
+              ) : (
+                <div className={styles.newUser}>
+                  <p>We'll create a new account for you.</p>
+                  <button 
+                    onClick={handleAuth}
+                    className={styles.primaryButton}
+                    disabled={loading}
+                  >
+                    <Image
+                      src="/google-icon.svg"
+                      alt="Google"
+                      width={20}
+                      height={20}
+                      className={styles.googleIcon}
+                    />
+                    Register with Google
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className={styles.footer}>
+          <p className={styles.terms}>
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </div>
       </div>
     </div>
-  )
-}
-
-export default LoginPage
+  );
+};

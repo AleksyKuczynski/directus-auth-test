@@ -1,105 +1,250 @@
-.loginPage {
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.container {
   min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  
-  .container {
-    background: white;
+  padding: 1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+  }
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: #718096;
+    font-size: 1rem;
+    margin: 0;
+  }
+}
+
+.logoContainer {
+  margin-bottom: 1rem;
+
+  .logo {
     border-radius: 12px;
-    padding: 3rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-                0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    max-width: 400px;
-    width: 100%;
-    
-    .title {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #1a202c;
-      margin-bottom: 2rem;
-      text-align: center;
-    }
-    
-    .loading {
-      text-align: center;
-      color: #718096;
-    }
-    
-    .loggedIn,
-    .existingUser,
-    .newUser {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    
-    .userName {
-      font-size: 1.125rem;
-      color: #4a5568;
-      text-align: center;
-      margin-bottom: 0.5rem;
-    }
-    
-    .emailInput {
-      padding: 0.75rem 1rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      font-size: 1rem;
-      transition: all 0.2s;
-      
-      &:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-      }
-    }
-    
-    button {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
+  }
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+  margin-top: 1rem;
+
+  .avatar {
+    border-radius: 50%;
+    border: 3px solid #e2e8f0;
+  }
+
+  .userDetails {
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
       font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      
-      .googleIcon {
-        width: 20px;
-        height: 20px;
-      }
+      color: #1a202c;
     }
-    
-    .loginButton,
-    .registerButton {
-      background: white;
-      color: #4a5568;
-      border: 2px solid #e2e8f0;
-      
-      &:hover:not(:disabled) {
-        background: #f7fafc;
-        border-color: #cbd5e0;
-      }
+
+    .email {
+      margin: 0.25rem 0 0 0;
+      color: #718096;
+      font-size: 0.875rem;
     }
-    
-    .profileButton {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(102, 126, 234, 0.3);
-      }
+  }
+}
+
+.form {
+  margin-bottom: 2rem;
+}
+
+.inputGroup {
+  margin-bottom: 1.5rem;
+
+  .label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+  }
+
+  .input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+
+    &:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
+
+    &::placeholder {
+      color: #a0aec0;
+    }
+  }
+}
+
+.checking {
+  text-align: center;
+  padding: 1rem;
+  color: #718096;
+  font-style: italic;
+}
+
+.userStatus {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+
+  .existingUser {
+    background-color: #f0fff4;
+    border: 1px solid #9ae6b4;
+
+    p {
+      color: #22543d;
+      margin-bottom: 1rem;
+    }
+  }
+
+  .newUser {
+    background-color: #fffaf0;
+    border: 1px solid #fbd38d;
+
+    p {
+      color: #744210;
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+.primaryButton {
+  width: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .googleIcon {
+    filter: brightness(0) invert(1);
+  }
+}
+
+.actions {
+  margin-top: 1.5rem;
+}
+
+.footer {
+  margin-top: 2rem;
+  text-align: center;
+
+  .terms {
+    font-size: 0.75rem;
+    color: #a0aec0;
+    line-height: 1.4;
+    margin: 0;
+  }
+}
+
+.loadingContainer {
+  text-align: center;
+  color: white;
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Responsive design
+@media (max-width: 480px) {
+  .container {
+    padding: 0.5rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+  }
+
+  .header h1 {
+    font-size: 1.75rem;
+  }
+
+  .userInfo {
+    flex-direction: column;
+    text-align: center;
   }
 }
