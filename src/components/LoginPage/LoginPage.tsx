@@ -96,15 +96,6 @@ export const LoginPage: React.FC = () => {
     <div className={styles.container} data-testid="login-page">
       <div className={styles.card}>
         <div className={styles.header}>
-          <div className={styles.logoContainer}>
-            <Image
-              src="/logo.svg"
-              alt="Logo"
-              width={64}
-              height={64}
-              className={styles.logo}
-            />
-          </div>
           <h1>Welcome</h1>
           <p className={styles.subtitle}>Sign in to access your account</p>
         </div>
@@ -135,38 +126,24 @@ export const LoginPage: React.FC = () => {
             <div className={styles.userStatus}>
               {userExists ? (
                 <div className={styles.existingUser}>
-                  <p>Welcome back! We found your account.</p>
+                  <p>✅ Welcome back! We found your account.</p>
                   <button 
                     onClick={handleAuth}
                     className={styles.primaryButton}
                     disabled={loading}
                   >
-                    <Image
-                      src="/google-icon.svg"
-                      alt="Google"
-                      width={20}
-                      height={20}
-                      className={styles.googleIcon}
-                    />
-                    Sign in with Google
+                    🔑 Sign in with Google
                   </button>
                 </div>
               ) : (
                 <div className={styles.newUser}>
-                  <p>We&apos;ll create a new account for you.</p>
+                  <p>🆕 We&apos;ll create a new account for you.</p>
                   <button 
                     onClick={handleAuth}
                     className={styles.primaryButton}
                     disabled={loading}
                   >
-                    <Image
-                      src="/google-icon.svg"
-                      alt="Google"
-                      width={20}
-                      height={20}
-                      className={styles.googleIcon}
-                    />
-                    Register with Google
+                    📝 Register with Google
                   </button>
                 </div>
               )}
