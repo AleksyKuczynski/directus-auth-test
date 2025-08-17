@@ -2,10 +2,11 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ProfilePage } from './ProfilePage';
+import type { DirectusUser } from '../../types/auth';
 
 // Mock the AuthContext
 const mockUseAuth = {
-  user: null as any,
+  user: null as DirectusUser | null,
   loading: false,
   login: jest.fn(),
   logout: jest.fn(),
