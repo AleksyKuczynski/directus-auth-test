@@ -1,52 +1,122 @@
-import Cookies from 'js-cookie';
-import type { TokenData } from '../types/auth';
+// src/services/BrowserAuthService.ts
 
-export class SessionManager {
-  private readonly ACCESS_TOKEN_KEY = 'directus_access_token';
-  private readonly REFRESH_TOKEN_KEY = 'directus_refresh_token';
+import { BrowserLoginState } from "@/types/auth";
 
-  setToken(tokenData: TokenData): void {
-    if (tokenData.access_token) {
-      Cookies.set(this.ACCESS_TOKEN_KEY, tokenData.access_token, {
-        expires: tokenData.expires_in ? tokenData.expires_in / 86400 : 7, // Convert seconds to days, default 7 days
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
+/**
+ * Service for detecting Google browser authentication state
+ * Focuses only on checking if user is logged into browser
+ */
+export class BrowserAuthService {
+  private static instance: BrowserAuthService;
+
+  private constructor() {}
+
+  public static getInstance(): BrowserAuthService {
+    if (!BrowserAuthService.instance) {
+      BrowserAuthService.instance = new BrowserAuthService();
     }
-
-    if (tokenData.refresh_token) {
-      Cookies.set(this.REFRESH_TOKEN_KEY, tokenData.refresh_token, {
-        expires: 30, // 30 days for refresh token
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
-    }
+    return BrowserAuthService.instance;
   }
 
-  getToken(): string | undefined {
-    return Cookies.get(this.ACCESS_TOKEN_KEY);
-  }
-
-  getRefreshToken(): string | undefined {
-    return Cookies.get(this.REFRESH_TOKEN_KEY);
-  }
-
-  clearToken(): void {
-    Cookies.remove(this.ACCESS_TOKEN_KEY);
-    Cookies.remove(this.REFRESH_TOKEN_KEY);
-  }
-
-  isTokenExpired(token?: string): boolean {
-    if (!token) return true;
-    
+  /**
+   * Check if user is logged into Google in their browser
+   * This uses Google's JavaScript API to detect browser login state
+   */
+  async checkBrowserLoginState(): Promise<BrowserLoginState> {
     try {
-      // Basic JWT payload extraction (without verification)
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const currentTime = Math.floor(Date.now() / 1000);
-      return payload.exp < currentTime;
+      // Load Google Auth API if not already loaded
+      await this.loadGoogleAuthAPI();
+      
+      // Initialize and check auth state
+      const authInstance = await this.initializeGoogleAuth();
+      const isSignedIn = authInstance.isSignedIn.get();
+      
+      if (!isSignedIn) {
+        return {
+          isLoggedIn: false,
+          userInfo: null,
+          error: null
+        };
+      }
+
+      // Get basic user info from browser session
+      const user = authInstance.currentUser.get();
+      const profile = user.getBasicProfile();
+      
+      return {
+        isLoggedIn: true,
+        userInfo: {
+          id: profile.getId(),
+          email: profile.getEmail(),
+          name: profile.getName(),
+          imageUrl: profile.getImageUrl()
+        },
+        error: null
+      };
+
     } catch (error) {
-      console.error('Error checking token expiration:', error);
-      return true;
+      console.error('Browser auth detection error:', error);
+      return {
+        isLoggedIn: false,
+        userInfo: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
+  }
+
+  /**
+   * Trigger Google browser login
+   */
+  async triggerBrowserLogin(): Promise<void> {
+    try {
+      await this.loadGoogleAuthAPI();
+      const authInstance = await this.initializeGoogleAuth();
+      await authInstance.signIn();
+    } catch (error) {
+      console.error('Browser login error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load Google Auth JavaScript API
+   */
+  private async loadGoogleAuthAPI(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') {
+        reject(new Error('Not in browser environment'));
+        return;
+      }
+
+      // Check if already loaded
+      if (window.gapi && window.gapi.auth2) {
+        resolve();
+        return;
+      }
+
+      // Load Google API script
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = () => {
+        window.gapi.load('auth2', () => resolve());
+      };
+      script.onerror = () => reject(new Error('Failed to load Google API'));
+      document.head.appendChild(script);
+    });
+  }
+
+  /**
+   * Initialize Google Auth instance
+   */
+  private async initializeGoogleAuth(): Promise<gapi.auth2.GoogleAuth> {
+    return new Promise((resolve, reject) => {
+      window.gapi.auth2.init({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        scope: 'profile email'
+      }).then(() => {
+        const authInstance = window.gapi.auth2.getAuthInstance();
+        resolve(authInstance);
+      }).catch(reject);
+    });
   }
 }

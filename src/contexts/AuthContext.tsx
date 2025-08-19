@@ -1,92 +1,66 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { DirectusAuth } from '../services/DirectusAuth';
-import { SessionManager } from '../services/AuthService';
-import type { DirectusUser, AuthContextType, AuthProviderProps } from '../types/auth';
+// src/contexts/AuthContext.tsx
+
+'use client';
+
+import React, { createContext, useContext, useState } from 'react';
+import { BrowserAuthService } from '../services/AuthService';
+import type { 
+  BrowserLoginState, 
+  AuthContextType, 
+  AuthProviderProps 
+} from '../types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Simplified Auth Provider focused only on browser authentication detection
+ */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<DirectusUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [browserLoginState, setBrowserLoginState] = useState<BrowserLoginState | null>(null);
+  const [loading, setLoading] = useState(false);
   
-  const directusAuth = new DirectusAuth();
-  const sessionManager = new SessionManager();
+  const browserAuthService = BrowserAuthService.getInstance();
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        setLoading(true);
-        const token = sessionManager.getToken();
-        if (token && !sessionManager.isTokenExpired(token)) {
-          const currentUser = await directusAuth.getCurrentUser();
-          setUser(currentUser);
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error);
-        sessionManager.clearToken();
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-  }, []); // Remove sessionManager from dependencies to avoid recreation
-
-  const login = async (): Promise<void> => {
+  const checkBrowserAuth = async (): Promise<void> => {
     try {
       setLoading(true);
-      const authUrl = await directusAuth.getGoogleAuthUrl();
-      window.location.href = authUrl;
+      const authState = await browserAuthService.checkBrowserLoginState();
+      setBrowserLoginState(authState);
     } catch (error) {
-      console.error('Login error:', error);
-      setLoading(false);
-      throw error;
-    }
-  };
-
-  const handleAuthCallback = async (code: string): Promise<DirectusUser> => {
-    try {
-      setLoading(true);
-      const user = await directusAuth.handleAuthCallback(code);
-      setUser(user);
-      return user;
-    } catch (error) {
-      console.error('Auth callback error:', error);
-      throw error;
+      console.error('Browser auth check failed:', error);
+      setBrowserLoginState({
+        isLoggedIn: false,
+        userInfo: null,
+        error: error instanceof Error ? error.message : 'Authentication check failed'
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = async (): Promise<void> => {
+  const triggerLogin = async (): Promise<void> => {
     try {
       setLoading(true);
-      await directusAuth.logout();
-      sessionManager.clearToken();
-      setUser(null);
+      await browserAuthService.triggerBrowserLogin();
+      // After login, check the new state
+      await checkBrowserAuth();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Browser login failed:', error);
+      setBrowserLoginState({
+        isLoggedIn: false,
+        userInfo: null,
+        error: error instanceof Error ? error.message : 'Login failed'
+      });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const checkUserExists = async (email: string): Promise<boolean> => {
-    try {
-      return await directusAuth.checkUserExists(email);
-    } catch (error) {
-      console.error('Check user exists error:', error);
-      return false;
     }
   };
 
   const contextValue: AuthContextType = {
-    user,
+    browserLoginState,
     loading,
-    login,
-    logout,
-    handleAuthCallback,
-    checkUserExists,
+    checkBrowserAuth,
+    triggerLogin,
   };
 
   return (

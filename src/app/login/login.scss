@@ -1,0 +1,152 @@
+// src/app/login/login.scss
+
+// Basic, clean styling for login page readability
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #f5f5f5;
+}
+
+.login-card {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+  h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+  }
+
+  h2 {
+    margin: 1.5rem 0 1rem 0;
+    color: #555;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 0.5rem;
+  }
+
+  h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: #666;
+  }
+}
+
+.auth-status {
+  margin: 2rem 0;
+}
+
+.status-loading,
+.status-unknown,
+.status-not-logged-in,
+.status-logged-in {
+  padding: 1rem;
+  border-radius: 6px;
+  margin: 1rem 0;
+}
+
+.status-loading {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+}
+
+.status-unknown {
+  background-color: #e2e3e5;
+  border: 1px solid #d6d8db;
+}
+
+.status-not-logged-in {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.status-logged-in {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.user-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.user-details {
+  p {
+    margin: 0.25rem 0;
+    font-size: 0.9rem;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-check,
+.btn-login {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-check {
+  background-color: #007bff;
+  color: white;
+
+  &:hover {
+    background-color: #0056b3;
+  }
+}
+
+.btn-login {
+  background-color: #28a745;
+  color: white;
+
+  &:hover {
+    background-color: #1e7e34;
+  }
+}
+
+.error {
+  color: #721c24;
+  font-size: 0.85rem;
+  margin: 0.5rem 0;
+}
+
+.debug-info {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+
+  h3 {
+    font-size: 0.9rem;
+    color: #666;
+  }
+
+  pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    overflow-x: auto;
+    border: 1px solid #e9ecef;
+  }
+}

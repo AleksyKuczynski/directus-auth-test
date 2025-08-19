@@ -1,23 +1,12 @@
+// src/app/layout.tsx
+
 import type { Metadata } from "next";
-import { Ubuntu, Ubuntu_Mono } from "next/font/google";
-import { ClientProvider } from "@/components/ClientProvider";
-import "./globals.css";
-
-const UbuntuSans = Ubuntu({
-  variable: "--font-Ubuntu-sans",
-  weight: ['400'],
-  subsets: ["latin"],
-});
-
-const UbuntuMono = Ubuntu_Mono({
-  variable: "--font-Ubuntu-mono",
-  weight: ['400'],
-  subsets: ["latin"],
-});
+import { AuthProvider } from "@/contexts/AuthContext";
+import "./login/login.scss";
 
 export const metadata: Metadata = {
-  title: "Directus Auth Test",
-  description: "OAuth authentication with Directus and Next.js",
+  title: "Browser Auth Test",
+  description: "Testing Google browser authentication detection",
 };
 
 export default function RootLayout({
@@ -27,10 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${UbuntuSans.variable} ${UbuntuMono.variable}`}>
-        <ClientProvider>
+      <body>
+        <AuthProvider>
           {children}
-        </ClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );
