@@ -8,8 +8,12 @@ import { BrowserLoginState, BrowserUserInfo } from "@/types/auth";
  */
 export class BrowserAuthService {
   private static instance: BrowserAuthService;
+  private googleClientId: string | null = null;
 
-  private constructor() {}
+  private constructor() {
+    // Initialize Google Client ID from environment
+    this.googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || null;
+  }
 
   public static getInstance(): BrowserAuthService {
     if (!BrowserAuthService.instance) {
@@ -20,29 +24,29 @@ export class BrowserAuthService {
 
   /**
    * Check if user is signed into Google using Google Identity Services
-   * This is the modern way to detect browser authentication state
+   * Note: Modern Google Identity Services has privacy limitations - 
+   * we can't passively detect login state, only through user interaction
    */
   async checkBrowserLoginState(): Promise<BrowserLoginState> {
     try {
-      // Load Google Identity Services if not already loaded
-      await this.loadGoogleIdentityServices();
-      
-      // Check if user has existing Google session
-      const hasSession = await this.checkExistingSession();
-      
-      if (!hasSession) {
+      // Check if we have Google Client ID configured
+      if (!this.googleClientId) {
         return {
           isLoggedIn: false,
           userInfo: null,
-          error: null
+          error: 'Google Client ID not configured. Please set NEXT_PUBLIC_GOOGLE_CLIENT_ID environment variable.'
         };
       }
 
-      // If we detect a session, we need user to actively consent to get profile info
-      // For now, we can only confirm they have a Google session
+      // Load Google Identity Services if not already loaded
+      await this.loadGoogleIdentityServices();
+      
+      // With modern Google Identity Services, we can't silently check login state
+      // due to privacy improvements. We can only detect through user interaction.
+      // Return a neutral state that indicates we're ready to check authentication
       return {
-        isLoggedIn: true,
-        userInfo: null, // Will be populated after user consent
+        isLoggedIn: false,
+        userInfo: null,
         error: null
       };
 
@@ -61,11 +65,15 @@ export class BrowserAuthService {
    */
   async triggerBrowserLogin(): Promise<BrowserUserInfo | null> {
     try {
+      if (!this.googleClientId) {
+        throw new Error('Google Client ID not configured');
+      }
+
       await this.loadGoogleIdentityServices();
       
       return new Promise((resolve, reject) => {
         window.google.accounts.id.initialize({
-          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+          client_id: this.googleClientId!,
           callback: (credentialResponse) => {
             try {
               // Decode the JWT credential response
@@ -122,54 +130,66 @@ export class BrowserAuthService {
   }
 
   /**
-   * Check if user has existing Google session (simplified check)
-   */
-  private async checkExistingSession(): Promise<boolean> {
-    // With Google Identity Services, we can't directly check session state
-    // We need to attempt a prompt to see if user is signed in
-    // This is a limitation of the new privacy-focused approach
-    
-    // For now, we'll return true and let the actual sign-in process handle detection
-    // This is the modern approach - detect through interaction rather than passive checking
-    return true;
-  }
-
-  /**
    * Render Sign In With Google button for fallback
    */
-  private renderSignInButton(resolve: (value: BrowserUserInfo | null) => void, reject: (error: any) => void): void {
+  private renderSignInButton(
+    resolve: (value: BrowserUserInfo | null) => void, 
+    reject: (error: any) => void
+  ): void {
     // Create a temporary container for the button
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'google-signin-button-temp';
-    buttonContainer.style.position = 'fixed';
-    buttonContainer.style.top = '50%';
-    buttonContainer.style.left = '50%';
-    buttonContainer.style.transform = 'translate(-50%, -50%)';
-    buttonContainer.style.zIndex = '10000';
-    buttonContainer.style.backgroundColor = 'white';
-    buttonContainer.style.padding = '20px';
-    buttonContainer.style.borderRadius = '8px';
-    buttonContainer.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    buttonContainer.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10000;
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 300px;
+      text-align: center;
+    `;
     document.body.appendChild(buttonContainer);
+
+    // Add a title
+    const title = document.createElement('p');
+    title.textContent = 'Sign in with Google';
+    title.style.cssText = `
+      margin: 0 0 15px 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 16px;
+      color: #333;
+    `;
+    buttonContainer.appendChild(title);
 
     // Add a close button
     const closeButton = document.createElement('button');
     closeButton.innerHTML = '×';
-    closeButton.style.position = 'absolute';
-    closeButton.style.top = '5px';
-    closeButton.style.right = '5px';
-    closeButton.style.border = 'none';
-    closeButton.style.background = 'none';
-    closeButton.style.fontSize = '20px';
-    closeButton.style.cursor = 'pointer';
+    closeButton.style.cssText = `
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      border: none;
+      background: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+    `;
     closeButton.onclick = () => {
       document.body.removeChild(buttonContainer);
       resolve(null);
     };
     buttonContainer.appendChild(closeButton);
 
+    // Create button container
+    const buttonDiv = document.createElement('div');
+    buttonContainer.appendChild(buttonDiv);
+
     // Render the Google Sign In button
-    window.google.accounts.id.renderButton(buttonContainer, {
+    window.google.accounts.id.renderButton(buttonDiv, {
       theme: 'outline',
       size: 'large',
       text: 'signin_with',
@@ -184,16 +204,24 @@ export class BrowserAuthService {
     try {
       // JWT has 3 parts: header.payload.signature
       const payload = credential.split('.')[1];
+      if (!payload) {
+        throw new Error('Invalid credential format');
+      }
+      
       const decodedPayload = JSON.parse(atob(payload));
+      
+      if (!decodedPayload.sub || !decodedPayload.email) {
+        throw new Error('Invalid credential payload');
+      }
       
       return {
         id: decodedPayload.sub,
         email: decodedPayload.email,
-        name: decodedPayload.name,
-        imageUrl: decodedPayload.picture
+        name: decodedPayload.name || decodedPayload.email,
+        imageUrl: decodedPayload.picture || ''
       };
     } catch (error) {
-      throw new Error('Failed to decode credential');
+      throw new Error('Failed to decode credential: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   }
 }

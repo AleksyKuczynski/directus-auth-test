@@ -5,8 +5,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * Simplified login page focused only on browser authentication detection
- * Shows different states based on browser login status
+ * Login page for browser authentication testing
+ * Demonstrates Google Identity Services integration
  */
 export default function LoginPage() {
   const { browserLoginState, loading, triggerLogin } = useAuth();
@@ -19,56 +19,70 @@ export default function LoginPage() {
     <div className="login-container">
       <div className="login-card">
         <h1>Browser Authentication Test</h1>
-        <p>Testing Google browser login detection</p>
+        <p>Testing Google browser login detection with Google Identity Services</p>
 
         <div className="auth-status">
-          <h2>Browser Authentication Test</h2>
-          <p>Using modern Google Identity Services</p>
+          <h2>Authentication Status</h2>
           
           {loading && (
             <div className="status-loading">
-              <p>🔄 Processing authentication...</p>
+              <p>🔄 Checking authentication...</p>
             </div>
           )}
 
           {!loading && !browserLoginState && (
             <div className="status-unknown">
-              <p>❓ Ready to test browser authentication</p>
-              <p>Note: Modern Google Identity Services requires user interaction to check authentication state.</p>
+              <p>⚠️ Authentication system initializing...</p>
+            </div>
+          )}
+
+          {!loading && browserLoginState && browserLoginState.error && (
+            <div className="status-error">
+              <h3>⚠️ Configuration Issue</h3>
+              <p className="error">{browserLoginState.error}</p>
+              {browserLoginState.error.includes('Google Client ID') && (
+                <div className="config-help">
+                  <h4>Setup Instructions:</h4>
+                  <ol>
+                    <li>Go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer">Google Cloud Console</a></li>
+                    <li>Create or select a project</li>
+                    <li>Enable Google Identity Services API</li>
+                    <li>Go to "APIs & Services" → "Credentials"</li>
+                    <li>Create "OAuth 2.0 Client ID" for Web Application</li>
+                    <li>Add your domain to authorized origins</li>
+                    <li>Copy the Client ID to your .env.local file</li>
+                  </ol>
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loading && browserLoginState && !browserLoginState.error && !browserLoginState.isLoggedIn && (
+            <div className="status-not-logged-in">
+              <h3>🔐 Ready for Authentication</h3>
+              <p>Google Identity Services is ready. Click below to test browser authentication.</p>
+              <p><small>Note: Modern Google Identity Services requires user interaction to check authentication state.</small></p>
               <button onClick={handleTriggerLogin} className="btn-login">
                 Sign In With Google
               </button>
             </div>
           )}
 
-          {!loading && browserLoginState && !browserLoginState.isLoggedIn && (
-            <div className="status-not-logged-in">
-              <h3>❌ Authentication not completed</h3>
-              <p>No Google authentication detected or user cancelled</p>
-              {browserLoginState.error && (
-                <p className="error">Error: {browserLoginState.error}</p>
-              )}
-              <div className="actions">
-                <button onClick={handleTriggerLogin} className="btn-login">
-                  Try Sign In With Google
-                </button>
-              </div>
-            </div>
-          )}
-
           {!loading && browserLoginState && browserLoginState.isLoggedIn && browserLoginState.userInfo && (
             <div className="status-logged-in">
-              <h3>✅ Successfully authenticated with Google!</h3>
+              <h3>✅ Authentication Successful!</h3>
               <div className="user-info">
-                <img 
-                  src={browserLoginState.userInfo.imageUrl} 
-                  alt="User avatar"
-                  className="user-avatar"
-                />
+                {browserLoginState.userInfo.imageUrl && (
+                  <img 
+                    src={browserLoginState.userInfo.imageUrl} 
+                    alt="User avatar"
+                    className="user-avatar"
+                  />
+                )}
                 <div className="user-details">
                   <p><strong>Name:</strong> {browserLoginState.userInfo.name}</p>
                   <p><strong>Email:</strong> {browserLoginState.userInfo.email}</p>
-                  <p><strong>ID:</strong> {browserLoginState.userInfo.id}</p>
+                  <p><strong>Google ID:</strong> {browserLoginState.userInfo.id}</p>
                 </div>
               </div>
               <div className="actions">
@@ -76,13 +90,19 @@ export default function LoginPage() {
                   Sign In Again
                 </button>
               </div>
+              <div className="next-steps">
+                <h4>Next Steps:</h4>
+                <p>✓ Browser authentication working</p>
+                <p>⏳ Directus integration (coming next)</p>
+                <p>⏳ User profile page</p>
+              </div>
             </div>
           )}
 
           {!loading && browserLoginState && browserLoginState.isLoggedIn && !browserLoginState.userInfo && (
-            <div className="status-logged-in">
-              <h3>🔍 Google session detected</h3>
-              <p>User has a Google session but profile data requires consent.</p>
+            <div className="status-partial">
+              <h3>🔍 Partial Authentication</h3>
+              <p>Google session detected but profile data requires consent.</p>
               <button onClick={handleTriggerLogin} className="btn-login">
                 Get Profile Information
               </button>
@@ -91,7 +111,7 @@ export default function LoginPage() {
         </div>
 
         <div className="debug-info">
-          <h3>Debug Information:</h3>
+          <h3>Debug Information</h3>
           <pre>{JSON.stringify(browserLoginState, null, 2)}</pre>
         </div>
       </div>

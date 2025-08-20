@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { BrowserAuthService } from '../services/BrowserAuthService';
 import type { 
   BrowserLoginState, 
@@ -13,7 +13,7 @@ import type {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Simplified Auth Provider focused only on browser authentication detection
+ * Auth Provider handling browser authentication detection and state management
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [browserLoginState, setBrowserLoginState] = useState<BrowserLoginState | null>(null);
@@ -21,6 +21,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   const browserAuthService = BrowserAuthService.getInstance();
 
+  /**
+   * Check browser authentication state
+   */
+  const checkBrowserAuth = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const loginState = await browserAuthService.checkBrowserLoginState();
+      setBrowserLoginState(loginState);
+    } catch (error) {
+      console.error('Browser auth check failed:', error);
+      setBrowserLoginState({
+        isLoggedIn: false,
+        userInfo: null,
+        error: error instanceof Error ? error.message : 'Auth check failed'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Trigger browser login flow
+   */
   const triggerLogin = async (): Promise<void> => {
     try {
       setLoading(true);
@@ -50,6 +73,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   };
+
+  // Check browser auth state on mount
+  useEffect(() => {
+    checkBrowserAuth();
+  }, []);
 
   const contextValue: AuthContextType = {
     browserLoginState,
