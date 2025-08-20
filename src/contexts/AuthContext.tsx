@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import { BrowserAuthService } from '../services/AuthService';
+import { BrowserAuthService } from '../services/BrowserAuthService';
 import type { 
   BrowserLoginState, 
   AuthContextType, 
@@ -21,29 +21,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   const browserAuthService = BrowserAuthService.getInstance();
 
-  const checkBrowserAuth = async (): Promise<void> => {
-    try {
-      setLoading(true);
-      const authState = await browserAuthService.checkBrowserLoginState();
-      setBrowserLoginState(authState);
-    } catch (error) {
-      console.error('Browser auth check failed:', error);
-      setBrowserLoginState({
-        isLoggedIn: false,
-        userInfo: null,
-        error: error instanceof Error ? error.message : 'Authentication check failed'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const triggerLogin = async (): Promise<void> => {
     try {
       setLoading(true);
-      await browserAuthService.triggerBrowserLogin();
-      // After login, check the new state
-      await checkBrowserAuth();
+      const userInfo = await browserAuthService.triggerBrowserLogin();
+      
+      if (userInfo) {
+        setBrowserLoginState({
+          isLoggedIn: true,
+          userInfo: userInfo,
+          error: null
+        });
+      } else {
+        setBrowserLoginState({
+          isLoggedIn: false,
+          userInfo: null,
+          error: 'Login was cancelled'
+        });
+      }
     } catch (error) {
       console.error('Browser login failed:', error);
       setBrowserLoginState({

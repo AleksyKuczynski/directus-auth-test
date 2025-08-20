@@ -24,43 +24,47 @@ export interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// Global type definitions for Google API
+// Global type definitions for Google Identity Services
 declare global {
   interface Window {
-    gapi: {
-      load: (api: string, callback: () => void) => void;
-      auth2: {
-        init: (config: {
-          client_id: string;
-          scope: string;
-        }) => Promise<gapi.auth2.GoogleAuth>;
-        getAuthInstance: () => gapi.auth2.GoogleAuth;
+    google: {
+      accounts: {
+        id: {
+          initialize: (config: GoogleIdentityConfig) => void;
+          prompt: (momentListener?: (notification: PromptMomentNotification) => void) => void;
+          renderButton: (parent: HTMLElement, options: GsiButtonConfiguration) => void;
+          disableAutoSelect: () => void;
+        };
       };
     };
   }
 
-  namespace gapi {
-    namespace auth2 {
-      interface GoogleAuth {
-        isSignedIn: {
-          get: () => boolean;
-        };
-        currentUser: {
-          get: () => GoogleUser;
-        };
-        signIn: () => Promise<GoogleUser>;
-      }
+  interface GoogleIdentityConfig {
+    client_id: string;
+    callback: (credentialResponse: CredentialResponse) => void;
+    auto_select?: boolean;
+    cancel_on_tap_outside?: boolean;
+  }
 
-      interface GoogleUser {
-        getBasicProfile: () => BasicProfile;
-      }
+  interface CredentialResponse {
+    credential: string;
+    select_by?: string;
+  }
 
-      interface BasicProfile {
-        getId: () => string;
-        getEmail: () => string;
-        getName: () => string;
-        getImageUrl: () => string;
-      }
-    }
+  interface PromptMomentNotification {
+    isNotDisplayed: () => boolean;
+    isSkippedMoment: () => boolean;
+    getNotDisplayedReason?: () => string;
+    getSkippedReason?: () => string;
+  }
+
+  interface GsiButtonConfiguration {
+    theme?: 'outline' | 'filled_blue' | 'filled_black';
+    size?: 'large' | 'medium' | 'small';
+    text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
+    shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+    logo_alignment?: 'left' | 'center';
+    width?: string;
+    locale?: string;
   }
 }
