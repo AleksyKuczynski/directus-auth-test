@@ -14,7 +14,7 @@
   background: white;
   border-radius: 12px;
   padding: 2rem;
-  max-width: 700px;
+  max-width: 800px;
   width: 100%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 
@@ -64,12 +64,14 @@
   margin: 2rem 0;
 }
 
+// Status containers
 .status-loading,
 .status-unknown,
 .status-not-logged-in,
 .status-logged-in,
 .status-error,
-.status-partial {
+.status-partial,
+.status-not-registered {
   padding: 1.5rem;
   border-radius: 8px;
   margin: 1rem 0;
@@ -112,6 +114,13 @@
   border: 1px solid #ffecb3;
 }
 
+.status-not-registered {
+  background-color: #f3e5f5;
+  border-left-color: #9c27b0;
+  border: 1px solid #ce93d8;
+}
+
+// User info display
 .user-info {
   display: flex;
   align-items: center;
@@ -141,23 +150,23 @@
   }
 }
 
-.actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
-  flex-wrap: wrap;
-}
-
-.btn-login {
+// Button styles
+.btn-login,
+.btn-register,
+.btn-profile {
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.95rem;
   font-weight: 500;
+  transition: background-color 0.2s ease;
+  margin: 0.5rem 0.5rem 0.5rem 0;
+}
+
+.btn-login {
   background-color: #4285f4;
   color: white;
-  transition: background-color 0.2s ease;
 
   &:hover {
     background-color: #3367d6;
@@ -168,6 +177,39 @@
   }
 }
 
+.btn-register {
+  background-color: #9c27b0;
+  color: white;
+
+  &:hover {
+    background-color: #7b1fa2;
+  }
+
+  &:active {
+    background-color: #6a1b9a;
+  }
+}
+
+.btn-profile {
+  background-color: #4caf50;
+  color: white;
+
+  &:hover {
+    background-color: #45a049;
+  }
+
+  &:active {
+    background-color: #3d8b40;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+
 .error {
   color: #d32f2f;
   font-size: 0.9rem;
@@ -175,6 +217,7 @@
   font-weight: 500;
 }
 
+// Config help section
 .config-help {
   margin-top: 1rem;
   padding: 1rem;
@@ -208,6 +251,36 @@
   }
 }
 
+// State explanation section
+.state-explanation {
+  margin: 2rem 0;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+
+  h3 {
+    margin-top: 0;
+    color: #495057;
+    font-size: 1rem;
+  }
+
+  h4 {
+    margin: 1rem 0 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+  }
+
+  .state-details {
+    p {
+      margin: 0.2rem 0;
+      font-size: 0.85rem;
+      color: #666;
+    }
+  }
+}
+
+// Next steps section
 .next-steps {
   margin-top: 1.5rem;
   padding: 1rem;
@@ -230,6 +303,7 @@
   }
 }
 
+// Debug info section
 .debug-info {
   margin-top: 2rem;
   padding-top: 1.5rem;
@@ -251,10 +325,40 @@
     font-family: 'Monaco', 'Consolas', monospace;
     line-height: 1.4;
     color: #333;
+    max-height: 300px;
+    overflow-y: auto;
   }
 }
 
+// Utility styles
 small {
   font-size: 0.85rem;
   color: #6c757d;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .login-container {
+    padding: 0.5rem;
+  }
+
+  .login-card {
+    padding: 1.5rem;
+  }
+
+  .user-info {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .btn-login,
+  .btn-register,
+  .btn-profile {
+    width: 100%;
+    margin: 0.25rem 0;
+  }
 }

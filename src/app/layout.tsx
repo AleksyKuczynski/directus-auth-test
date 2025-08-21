@@ -3,6 +3,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import "./login/login.scss";
+import "./profile/profile.scss";
 
 export const metadata: Metadata = {
   title: "Browser Auth Test",
