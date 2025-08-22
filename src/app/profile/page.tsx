@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 /**
  * User Profile Page
  * Shows user information and provides logout functionality
- * Only accessible when user is fully authenticated (Case 3)
+ * Only accessible when user is fully authenticated
  */
 export default function ProfilePage() {
   const { combinedAuthState, userState, logoutFromDirectus } = useAuth();
@@ -19,17 +19,17 @@ export default function ProfilePage() {
   // Redirect if not fully authenticated
   useEffect(() => {
     if (userState !== UserState.LOADING && userState !== UserState.BROWSER_LOGGED_IN_DIRECTUS_LOGGED_IN) {
-      router.push('/login');
+      router.push('/');
     }
   }, [userState, router]);
 
   const handleLogout = async () => {
     await logoutFromDirectus();
-    router.push('/login');
+    router.push('/');
   };
 
-  const handleBackToLogin = () => {
-    router.push('/login');
+  const handleBackToHome = () => {
+    router.push('/');
   };
 
   // Show loading state
@@ -37,26 +37,25 @@ export default function ProfilePage() {
     return (
       <div className="profile-container">
         <div className="profile-card">
-          <h1>Profile</h1>
           <div className="loading-state">
-            <p>🔄 Loading profile...</p>
+            <h2>Loading Profile...</h2>
+            <p>Please wait while we load your information.</p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to home if not authenticated
   if (userState !== UserState.BROWSER_LOGGED_IN_DIRECTUS_LOGGED_IN) {
     return (
       <div className="profile-container">
         <div className="profile-card">
-          <h1>Profile</h1>
           <div className="access-denied">
-            <h3>🔒 Access Denied</h3>
+            <h2>Access Denied</h2>
             <p>You need to be logged in to view this page.</p>
-            <button onClick={handleBackToLogin} className="btn-login">
-              Go to Login
+            <button onClick={handleBackToHome} className="btn-primary">
+              Go to Home
             </button>
           </div>
         </div>
@@ -88,10 +87,10 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Detailed Profile Information */}
+          {/* Account Information */}
           <div className="profile-details">
             <div className="info-section">
-              <h3>Google Account Information</h3>
+              <h3>Account Information</h3>
               <div className="info-grid">
                 <div className="info-item">
                   <label>Name:</label>
@@ -102,17 +101,7 @@ export default function ProfilePage() {
                   <span>{browserUser?.email}</span>
                 </div>
                 <div className="info-item">
-                  <label>Google ID:</label>
-                  <span>{browserUser?.id}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="info-section">
-              <h3>App Account Information</h3>
-              <div className="info-grid">
-                <div className="info-item">
-                  <label>User ID:</label>
+                  <label>Account ID:</label>
                   <span>{directusUser?.id}</span>
                 </div>
                 <div className="info-item">
@@ -123,12 +112,6 @@ export default function ProfilePage() {
                   <label>Member Since:</label>
                   <span>{directusUser?.created_at ? new Date(directusUser.created_at).toLocaleDateString() : 'Unknown'}</span>
                 </div>
-                {directusUser?.birthday && (
-                  <div className="info-item">
-                    <label>Birthday:</label>
-                    <span>{new Date(directusUser.birthday).toLocaleDateString()}</span>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -138,16 +121,9 @@ export default function ProfilePage() {
             <button onClick={handleLogout} className="btn-logout">
               Logout
             </button>
-            <button onClick={handleBackToLogin} className="btn-secondary">
-              Back to Login
+            <button onClick={handleBackToHome} className="btn-secondary">
+              Back to Home
             </button>
-          </div>
-
-          {/* Development Info */}
-          <div className="dev-info">
-            <h4>Development Information</h4>
-            <p>Authentication State: {userState}</p>
-            <p>Session Token: {combinedAuthState.directus?.token ? 'Active' : 'None'}</p>
           </div>
         </div>
       </div>

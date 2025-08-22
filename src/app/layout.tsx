@@ -2,12 +2,12 @@
 
 import type { Metadata } from "next";
 import { AuthProvider } from "@/contexts/AuthContext";
-import "./login/login.scss";
+import "./globals.css";
 import "./profile/profile.scss";
 
 export const metadata: Metadata = {
-  title: "Browser Auth Test",
-  description: "Testing Google browser authentication detection",
+  title: "Authentication App",
+  description: "Google and Directus authentication integration",
 };
 
 export default function RootLayout({

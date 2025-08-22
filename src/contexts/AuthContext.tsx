@@ -18,14 +18,14 @@ import { UserState as UserStateEnum } from '../types/auth';
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Auth Provider handling both browser and Directus authentication
+ * Production Auth Provider handling both browser and Directus authentication
  */
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Legacy state for backward compatibility
   const [browserLoginState, setBrowserLoginState] = useState<BrowserLoginState | null>(null);
   const [loading, setLoading] = useState(false);
   
-  // New combined authentication state
+  // Combined authentication state
   const [combinedAuthState, setCombinedAuthState] = useState<CombinedAuthState>({
     browser: null,
     directus: null,
@@ -60,15 +60,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     if (directus.isRegistered && directus.isLoggedIn) {
-      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_LOGGED_IN; // Case 3
+      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_LOGGED_IN; // Case 2
     }
 
     if (directus.isRegistered && !directus.isLoggedIn) {
-      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_EXISTS_NOT_LOGGED; // Case 4
+      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_EXISTS_NOT_LOGGED; // Case 3
     }
 
     if (!directus.isRegistered) {
-      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_NOT_EXISTS; // Case 5
+      return UserStateEnum.BROWSER_LOGGED_IN_DIRECTUS_NOT_EXISTS; // Case 4
     }
 
     return UserStateEnum.ERROR;
@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   /**
-   * Check browser authentication state (legacy method)
+   * Check browser authentication state
    */
   const checkBrowserAuth = async (): Promise<void> => {
     try {
@@ -136,7 +136,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   /**
-   * Trigger browser login flow (legacy method)
+   * Trigger browser login flow
    */
   const triggerLogin = async (): Promise<void> => {
     try {
@@ -287,7 +287,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     checkBrowserAuth,
     triggerLogin,
     
-    // New combined authentication API
+    // Combined authentication API
     combinedAuthState,
     userState,
     

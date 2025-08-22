@@ -3,15 +3,14 @@
 import { BrowserLoginState, BrowserUserInfo } from "@/types/auth";
 
 /**
- * Modern Browser Auth Service using Google Identity Services
- * Replaces deprecated gapi.auth2 with current Google Identity Services
+ * Production Browser Auth Service
+ * Uses button-only approach to avoid Google prompt() API issues
  */
 export class BrowserAuthService {
   private static instance: BrowserAuthService;
   private googleClientId: string | null = null;
 
   private constructor() {
-    // Initialize Google Client ID from environment
     this.googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || null;
   }
 
@@ -23,13 +22,10 @@ export class BrowserAuthService {
   }
 
   /**
-   * Check if user is signed into Google using Google Identity Services
-   * Note: Modern Google Identity Services has privacy limitations - 
-   * we can't passively detect login state, only through user interaction
+   * Check if user is signed into Google
    */
   async checkBrowserLoginState(): Promise<BrowserLoginState> {
     try {
-      // Check if we have Google Client ID configured
       if (!this.googleClientId) {
         return {
           isLoggedIn: false,
@@ -38,12 +34,8 @@ export class BrowserAuthService {
         };
       }
 
-      // Load Google Identity Services if not already loaded
       await this.loadGoogleIdentityServices();
       
-      // With modern Google Identity Services, we can't silently check login state
-      // due to privacy improvements. We can only detect through user interaction.
-      // Return a neutral state that indicates we're ready to check authentication
       return {
         isLoggedIn: false,
         userInfo: null,
@@ -61,7 +53,7 @@ export class BrowserAuthService {
   }
 
   /**
-   * Trigger Google browser sign-in using One Tap or Sign In With Google
+   * Trigger Google browser sign-in using button-only approach
    */
   async triggerBrowserLogin(): Promise<BrowserUserInfo | null> {
     try {
@@ -70,30 +62,35 @@ export class BrowserAuthService {
       }
 
       await this.loadGoogleIdentityServices();
-      
-      return new Promise((resolve, reject) => {
-        window.google.accounts.id.initialize({
-          client_id: this.googleClientId!,
-          callback: (credentialResponse) => {
-            try {
-              // Decode the JWT credential response
-              const userInfo = this.decodeJWTCredential(credentialResponse.credential);
-              resolve(userInfo);
-            } catch (error) {
-              reject(error);
-            }
-          },
-          auto_select: false,
-          cancel_on_tap_outside: true,
-        });
+      await new Promise(resolve => setTimeout(resolve, 300));
 
-        // Try One Tap first
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // One Tap didn't show, render a button instead
-            this.renderSignInButton(resolve, reject);
-          }
-        });
+      if (!window.google?.accounts?.id) {
+        throw new Error('Google Identity Services not available');
+      }
+
+      return new Promise((resolve, reject) => {
+        try {
+          // Initialize Google Identity Services
+          window.google.accounts.id.initialize({
+            client_id: this.googleClientId!,
+            callback: (credentialResponse) => {
+              try {
+                const userInfo = this.decodeJWTCredential(credentialResponse.credential);
+                resolve(userInfo);
+              } catch (error) {
+                reject(error);
+              }
+            },
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+
+          // Show sign-in button directly (bypassing problematic prompt())
+          this.renderSignInButton(resolve, reject);
+
+        } catch (error) {
+          reject(error);
+        }
       });
 
     } catch (error) {
@@ -112,89 +109,156 @@ export class BrowserAuthService {
         return;
       }
 
-      // Check if already loaded
       if (window.google && window.google.accounts) {
         resolve();
         return;
       }
 
-      // Load Google Identity Services script
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
       script.defer = true;
-      script.onload = () => resolve();
+      script.onload = () => {
+        setTimeout(() => {
+          if (window.google?.accounts?.id) {
+            resolve();
+          } else {
+            reject(new Error('Google Identity Services API not available'));
+          }
+        }, 200);
+      };
       script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
       document.head.appendChild(script);
     });
   }
 
   /**
-   * Render Sign In With Google button for fallback
+   * Render Google Sign In button
    */
   private renderSignInButton(
     resolve: (value: BrowserUserInfo | null) => void, 
     reject: (error: any) => void
   ): void {
-    // Create a temporary container for the button
+    // Remove any existing button
+    const existingButton = document.getElementById('google-signin-modal');
+    if (existingButton) {
+      document.body.removeChild(existingButton);
+    }
+
     const buttonContainer = document.createElement('div');
-    buttonContainer.id = 'google-signin-button-temp';
+    buttonContainer.id = 'google-signin-modal';
     buttonContainer.style.cssText = `
       position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       z-index: 10000;
+    `;
+
+    const modal = document.createElement('div');
+    modal.style.cssText = `
       background-color: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      min-width: 300px;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
       text-align: center;
+      max-width: 400px;
+      width: 90%;
     `;
-    document.body.appendChild(buttonContainer);
 
-    // Add a title
-    const title = document.createElement('p');
-    title.textContent = 'Sign in with Google';
+    // Title
+    const title = document.createElement('h3');
+    title.textContent = 'Sign in to continue';
     title.style.cssText = `
-      margin: 0 0 15px 0;
+      margin: 0 0 1rem 0;
       font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      font-size: 16px;
+      font-size: 1.5rem;
       color: #333;
+      font-weight: 600;
     `;
-    buttonContainer.appendChild(title);
+    modal.appendChild(title);
 
-    // Add a close button
+    // Subtitle
+    const subtitle = document.createElement('p');
+    subtitle.textContent = 'Choose your Google account to continue';
+    subtitle.style.cssText = `
+      margin: 0 0 2rem 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 1rem;
+      color: #666;
+      line-height: 1.5;
+    `;
+    modal.appendChild(subtitle);
+
+    // Close button
     const closeButton = document.createElement('button');
     closeButton.innerHTML = '×';
     closeButton.style.cssText = `
       position: absolute;
-      top: 5px;
-      right: 5px;
+      top: 1rem;
+      right: 1rem;
       border: none;
       background: none;
-      font-size: 20px;
+      font-size: 1.5rem;
       cursor: pointer;
       color: #666;
+      padding: 0.5rem;
+      line-height: 1;
     `;
     closeButton.onclick = () => {
       document.body.removeChild(buttonContainer);
       resolve(null);
     };
-    buttonContainer.appendChild(closeButton);
+    modal.style.position = 'relative';
+    modal.appendChild(closeButton);
 
-    // Create button container
+    // Button container
     const buttonDiv = document.createElement('div');
-    buttonContainer.appendChild(buttonDiv);
+    buttonDiv.style.marginBottom = '1rem';
+    modal.appendChild(buttonDiv);
 
-    // Render the Google Sign In button
-    window.google.accounts.id.renderButton(buttonDiv, {
-      theme: 'outline',
-      size: 'large',
-      text: 'signin_with',
-      shape: 'rectangular',
-    });
+    // Cancel button
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.style.cssText = `
+      padding: 0.75rem 1.5rem;
+      border: 1px solid #ddd;
+      background: white;
+      color: #666;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      margin-top: 1rem;
+    `;
+    cancelButton.onclick = () => {
+      document.body.removeChild(buttonContainer);
+      resolve(null);
+    };
+    modal.appendChild(cancelButton);
+
+    buttonContainer.appendChild(modal);
+
+    try {
+      // Render Google button
+      window.google.accounts.id.renderButton(buttonDiv, {
+        theme: 'filled_blue',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        width: '300',
+      });
+      
+      document.body.appendChild(buttonContainer);
+
+    } catch (error) {
+      reject(error);
+    }
   }
 
   /**
@@ -202,7 +266,6 @@ export class BrowserAuthService {
    */
   private decodeJWTCredential(credential: string): BrowserUserInfo {
     try {
-      // JWT has 3 parts: header.payload.signature
       const payload = credential.split('.')[1];
       if (!payload) {
         throw new Error('Invalid credential format');
