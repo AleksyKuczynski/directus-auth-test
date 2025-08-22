@@ -21,7 +21,8 @@ export class DirectusAuthService {
 
   private constructor() {
     this.directusUrl = process.env.NEXT_PUBLIC_DIRECTUS_URL || null;
-    this.adminToken = process.env.DIRECTUS_TOKEN || null;
+    // For testing: use NEXT_PUBLIC_DIRECTUS_TOKEN (not secure for production)
+    this.adminToken = process.env.NEXT_PUBLIC_DIRECTUS_TOKEN || null;
   }
 
   public static getInstance(): DirectusAuthService {
@@ -51,11 +52,28 @@ export class DirectusAuthService {
     this.validateConfiguration();
 
     const token = useAdminToken ? this.adminToken : this.userToken;
-    const headers: HeadersInit = {
+    
+    // Fix TypeScript issue with proper header typing
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
     };
 
+    // Add existing headers from options
+    if (options.headers) {
+      if (options.headers instanceof Headers) {
+        options.headers.forEach((value, key) => {
+          headers[key] = value;
+        });
+      } else if (Array.isArray(options.headers)) {
+        options.headers.forEach(([key, value]) => {
+          headers[key] = value;
+        });
+      } else {
+        Object.assign(headers, options.headers);
+      }
+    }
+
+    // Add authorization header if token exists
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -80,7 +98,8 @@ export class DirectusAuthService {
     try {
       const response = await this.makeRequest<DirectusListResponse<DirectusUser>>(
         `/items/app_users?filter[google_id][_eq]=${googleId}&limit=1`,
-        { method: 'GET' }
+        { method: 'GET' },
+        true // Use admin token for checking user existence
       );
 
       return response.data.length > 0 ? response.data[0] : null;
@@ -108,7 +127,8 @@ export class DirectusAuthService {
         {
           method: 'POST',
           body: JSON.stringify(userData),
-        }
+        },
+        true // Use admin token for user creation
       );
 
       return response.data;
@@ -120,20 +140,19 @@ export class DirectusAuthService {
 
   /**
    * Authenticate user and get session token
-   * Since we're using Google OAuth, we'll create a custom auth endpoint
-   * or use Directus's built-in authentication with a custom approach
+   * For testing: using admin token approach
+   * For production: implement proper token generation via API route
    */
   async authenticateUser(directusUser: DirectusUser): Promise<string> {
     try {
-      // For now, we'll use admin token approach
-      // In production, you should implement a custom auth endpoint
-      // that validates the Google token and returns a Directus token
-      
       if (!this.adminToken) {
-        throw new Error('Admin token not configured for user authentication');
+        throw new Error('Directus token not configured. Please set NEXT_PUBLIC_DIRECTUS_TOKEN environment variable for testing.');
       }
 
-      // Store user token (in production, implement proper token generation)
+      // For testing purposes, we'll use the admin token as user token
+      // In production, you should implement a proper authentication endpoint
+      // that generates user-specific tokens
+      
       this.userToken = this.adminToken;
       
       // Store token in localStorage for persistence
